@@ -28,45 +28,44 @@ void JobScheduler::Execute() {
 	CurrentScheduler = this;
 
 	//スケジューラ実行
-	Job* job = this->Top;
 	if (0 != setjmp(SuspendJmp)) {
-		job = this->Top->next;
-		this->Top->next = NULL;
-		this->Top = job;
+		Job* job = Top->next;
+		Top->next = NULL;
+		Top = job;
 	}
-	if (NULL == job)
+	if (NULL == Top)
 		return;
 
 	//ジョブ実行
-	if (JobState::START == job->state) {
-		job->state = JobState::BUSY;
-		job->Ready();
+	if (JobState::START == Top->state) {
+		Top->state = JobState::BUSY;
+		Top->Ready();
 		for (;;) {
 			try {
-				job->Start();
-				job->state = JobState::SUCCESS;
-				job->Success();
+				Top->Start();
+				Top->state = JobState::SUCCESS;
+				Top->Success();
 				break;
 			}
 			catch (int err_code) {
-				job->Failsafe();
+				Top->Failsafe();
 
 				//ユーザ通知
 				if (false) {
-					job->Ready();
+					Top->Ready();
 				}
 				else {
 					//中断を選択
-					job->error_code = err_code;
-					job->state = JobState::FAILED;
+					Top->error_code = err_code;
+					Top->state = JobState::FAILED;
 					break;
 				}
 			}
 		}
-		longjmp(SuspendJmp, (int)job);
+		longjmp(SuspendJmp, (int)Top);
 	}
 	else {
-		longjmp(job->buf, (int)job);
+		longjmp(Top->buf, (int)Top);
 	}
 }
 
